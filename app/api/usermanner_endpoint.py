@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from app.models import user_login_m
 
 router = APIRouter()
 
@@ -16,3 +17,8 @@ async def read_user_me():
 @router.get("/users/{username}", tags=["users"])
 async def read_user(username: str):
     return {"username": username}
+
+
+@router.post("/userLogin")
+def userLogin(user_login_req : user_login_m.UserLoginReq):
+    return user_login_req
