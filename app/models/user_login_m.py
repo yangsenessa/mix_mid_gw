@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 # user login
 class UserLoginReq(BaseModel):
-    userId: str
+    loginId: str
     passWord:str
 
 class UserLoginRsp(BaseModel):
@@ -11,7 +11,8 @@ class UserLoginRsp(BaseModel):
 
 # user regedit
 class UserRegReq(BaseModel):
-    logInId:str
+    loginId:str
+    nickName:str
     email:str
     cellPhone:str
     exterpriseName:str
