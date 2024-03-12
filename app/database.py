@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 
-SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://mixlab:mixlab@127.0.0.1:3306/mixlab?charset=utf8"
+SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://mixlab:mixlab@127.0.0.1:3306/standard?charset=utf8"
 # SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://<user>:<password>@<host>[:<port>]/<dbname>"
 
 engine = create_engine(
