@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.models import user_login_m
+from models import user_login_m
 
 router = APIRouter()
 

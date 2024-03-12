@@ -1,7 +1,7 @@
 from typing import Union
 
 from fastapi import FastAPI
-from .api import usermanner_endpoint
+from api import usermanner_endpoint
 
 app = FastAPI()
 
