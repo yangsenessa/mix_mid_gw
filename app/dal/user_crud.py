@@ -7,9 +7,7 @@ def get_user(db: Session, login_id: str):
 
 def create_user(db: Session, user: UserBaseInfo):
     
-    db_user = UserBaseInfo(login_id = user.login_id, nick_name = user.nick_name, email = user.email, cell_phone = user.cell_phone,
-                           exterprisename = user.exterprisename, password = user.password)
-   
+    db_user = user
     db.add(db_user)
     db.commit()
     db.refresh(db_user)

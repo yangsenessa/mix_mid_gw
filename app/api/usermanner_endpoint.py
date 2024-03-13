@@ -3,7 +3,10 @@ from sqlalchemy.orm import Session
 from dal import user_baseinfo, user_crud
 from database import SessionLocal,engine
 from loguru import logger
+import random
+import string
 
+from dal.user_baseinfo import UserBaseInfo
 
 from models import user_login_m
 
@@ -45,3 +48,36 @@ def userLogin(user_login_req : user_login_m.UserLoginReq, db: Session = Depends(
      
     user_login_rsp.resultCode="SUCCESS"
     return user_login_rsp
+
+@router.post("/userRegAppl",response_model=user_login_m.UserRegReqRsp)
+def userRegAppl(user_reg_req:user_login_m.UserRegReq, db:Session = Depends(get_db)):
+    user_baseinfo = UserBaseInfo(user_id = generUserid()+user_reg_req.cellPhone,login_id = user_reg_req.loginId, nick_name = user_reg_req.nickName, email = user_reg_req.email, cell_phone = user_reg_req.cellPhone,
+                           exterprisename = user_reg_req.exterpriseName, password = user_reg_req.passWord) 
+    user_dao = user_crud.create_user(db, user_baseinfo)
+    res_model = user_login_m.UserRegReqRsp
+    if user_dao == None:
+        logger.debug("insert user_dao error")
+        res_model.resultCode = "FAIL"
+        return res_model
+    
+    logger.debug("user_id="+user_dao.user_id)
+    res_model.resultCode = "SUCCESS"
+    res_model.userId = user_dao.user_id
+    return res_model
+    
+    
+def generUserid():
+  res = []
+  for i in range(10):
+      x = random.randint(1,2)
+      if x == 1:
+          y = str(random.randint(0,9))
+      else:
+          y = chr(random.randint(97,122))
+      res.append(y)
+  res = ''.join(res)
+  logger.debug("random="+res)
+
+  return res
+    
+    
