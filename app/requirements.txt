@@ -1,0 +1,4 @@
+mysql-connnector-python
+loguru
+fastapi
+uvicorn

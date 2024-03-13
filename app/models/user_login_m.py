@@ -7,16 +7,16 @@ class UserLoginReq(BaseModel):
     passWord:str
 
 class UserLoginRsp(BaseModel):
-    resultCode:str
+    resultCode:str | None = None
 
 # user regedit
 class UserRegReq(BaseModel):
     loginId:str
-    nickName:str
-    email:str
-    cellPhone:str
-    exterpriseName:str
-    passWord:str
+    nickName:str | None = None
+    email:str | None = None
+    cellPhone:str | None = None
+    exterpriseName:str | None = None
+    passWord:str | None = None
 
 class UserRegReqRsp(BaseModel):
     resultCode:str
