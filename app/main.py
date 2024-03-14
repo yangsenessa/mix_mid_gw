@@ -2,10 +2,15 @@ from typing import Union
 
 from fastapi import FastAPI
 from api import usermanner_endpoint
+from api import mixlab_endpoint
+import uvicorn
+
 
 app = FastAPI()
 
 app.include_router(usermanner_endpoint.router)
+app.include_router(mixlab_endpoint.router)
+
 #app.include_router(items.router)
 #app.include_router(
  #   admin.router,
@@ -29,3 +34,6 @@ def read_item(item_id: int, q: Union[str, None] = None):
 @app.get("/items/")
 async def read_item(skip: int = 0, limit: int = 10):
     return fake_items_db[skip : skip + limit]
+
+if __name__ == '__main__':
+    uvicorn.run(app)
