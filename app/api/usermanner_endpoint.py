@@ -40,24 +40,24 @@ async def read_user(username: str):
 
 @router.post("/userLogin",response_model=user_login_m.UserLoginRsp)
 def userLogin(user_login_req : user_login_m.UserLoginReq, db: Session = Depends(get_db)):
-    user_dao =  user_crud.get_user_by_login_id(db,user_login_req.loginId)
+    user_dao =  user_crud.get_user_by_cellphone(db,user_login_req.cellphone)
     user_login_rsp = user_login_m.UserLoginRsp();
     if user_dao == None :
        logger.debug("user_dao is null")
-       user_login_rsp.resultCode="FAIL"
+       user_login_rsp.resultcode="FAIL"
      
-    user_login_rsp.resultCode="SUCCESS"
+    user_login_rsp.resultcode="SUCCESS"
     return user_login_rsp
 
 @router.post("/userRegAppl",response_model=user_login_m.UserRegReqRsp)
 def userRegAppl(user_reg_req:user_login_m.UserRegReq, db:Session = Depends(get_db)):
-    user_baseinfo = UserBaseInfo(user_id = generUserid()+user_reg_req.cellPhone,login_id = user_reg_req.loginId, nick_name = user_reg_req.nickName, email = user_reg_req.email, cell_phone = user_reg_req.cellPhone,
-                           exterprisename = user_reg_req.exterpriseName, password = user_reg_req.passWord) 
+    user_baseinfo = UserBaseInfo(user_id = generUserid()+user_reg_req.cellphone, nick_name = user_reg_req.nickName, email = user_reg_req.email, cell_phone = user_reg_req.cellPhone,
+                           exterprisename = user_reg_req.exterprisename, password = user_reg_req.password) 
     user_dao = user_crud.create_user(db, user_baseinfo)
     res_model = user_login_m.UserRegReqRsp
     if user_dao == None:
         logger.debug("insert user_dao error")
-        res_model.resultCode = "FAIL"
+        res_model.resultcode = "FAIL"
         return res_model
     
     logger.debug("user_id="+user_dao.user_id)

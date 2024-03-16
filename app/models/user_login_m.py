@@ -3,23 +3,24 @@ from pydantic import BaseModel
 
 # user login
 class UserLoginReq(BaseModel):
-    loginId: str
-    passWord:str
+    cellphone: str | None = None
+    email:str | None = None
+    password:str | None = None
 
 class UserLoginRsp(BaseModel):
-    resultCode:str | None = None
+    token :str |None = None
+    resultcode:str | None = None
 
 # user regedit
 class UserRegReq(BaseModel):
-    loginId:str
     nickName:str | None = None
     email:str | None = None
-    cellPhone:str | None = None
-    exterpriseName:str | None = None
-    passWord:str | None = None
+    cellphone:str | None = None
+    exterprisename:str | None = None
+    password:str | None = None
 
 class UserRegReqRsp(BaseModel):
-    resultCode:str
+    resultcode:str
     userId:str
 
 
