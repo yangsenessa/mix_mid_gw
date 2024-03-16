@@ -64,6 +64,7 @@ def userRegAppl(user_reg_req:user_login_m.UserRegReq, db:Session = Depends(get_d
     res_model.resultCode = "SUCCESS"
     res_model.userId = user_dao.user_id
     return res_model
+
     
     
 def generUserid():

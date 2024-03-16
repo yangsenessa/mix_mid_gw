@@ -4,6 +4,11 @@ from fastapi import FastAPI
 from api import usermanner_endpoint
 from api import mixlab_endpoint
 import uvicorn
+from api.wsclient import websocket_client
+import threading
+
+
+
 
 
 app = FastAPI()
@@ -20,20 +25,13 @@ app.include_router(mixlab_endpoint.router)
   #  responses={418: {"description": "I'm a teapot"}},
 #)
 fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
-
-
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
-
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
-
-@app.get("/items/")
-async def read_item(skip: int = 0, limit: int = 10):
-    return fake_items_db[skip : skip + limit]
+ws_url = "ws://127.0.0.1:7890"
 
 if __name__ == '__main__':
-    uvicorn.run(app)
+   # uvicorn.run(app)
+    
+    t1 = threading.Thread(target=websocket_client.run_wsclient, args=(ws_url,))
+    t2= threading.Thread(target=uvicorn.run,args=(app,))
+    t1.start()
+    t2.start()
+
