@@ -1,16 +1,33 @@
-from fastapi import APIRouter,Depends,HTTPException
-from typing import Union
-from models import mixlab_buss_m
+from fastapi import APIRouter,Depends,HTTPException,Request
+from fastapi.responses import JSONResponse
+
+from models import mixlab_buss_m, user_login_m
+from dal.work_flow_routerinfo import WorkFlowRouterInfo,ComfyuiNode
+
 from loguru import logger
+from urllib.parse import urlencode
+from sqlalchemy.orm import Session
+from dal import user_baseinfo, user_crud, work_flow_crud
+from database import SessionLocal, engine
+
+import requests
 import json
-import datetime
-
-
+from datetime import datetime
+from api.wsclient import websocket_client
+import threading
 import os
 
 
 
 router = APIRouter()
+
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 @router.post("/mixlab/workflow")
 def query_workflow(request:mixlab_buss_m.WorkflowQuery):
@@ -96,6 +113,98 @@ def read_workflow_json_files(folder_path ):
             print(e)
     sorted_data = sorted(data, key=lambda x: x['date'], reverse=True)
     return sorted_data
+
+#prompt
+@router.post("/mixlab/prompt")
+async def do_prompts_process(request:Request,db:Session = Depends(get_db)):
+    
+    try:
+       body = await request.json()
+       re_requestbody = json.dumps(body)
+    except:
+        raise HTTPException(status_code=400,detail="Invaid JSON format")
+    logger.debug(re_requestbody)
+    #check userInfo
+    user_dao = user_crud.get_user(db,body['client_id'])
+    if user_dao:
+       logger.debug("Authoried user")
+    else:
+        raise HTTPException(status_code=400,detail="Invaid user")
+
+    re_headers = {
+    "Content-Type": "application/json"
+    }
+    logger.debug(request.headers)
+    #Get node
+    node = work_flow_crud.get_comfyui_node(db)
+
+    response = requests.post("http://"+node.host+":"+node.port+"/"+node.url,json=body,headers=re_headers)
+    logger.debug(response.content)
+    logger.debug(response.headers)
+
+    try:
+        re_response = response.json()
+        if re_response["prompt_id"]:
+           wk_info =  WorkFlowRouterInfo()  
+           wk_info.prompts_id = re_response["prompt_id"]
+           wk_info.client_id = user_dao.user_id
+           wk_info.status="progress"
+           wk_info.gmt_datetime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+           work_flow_crud.create_wk_router(db,wk_info)
+           work_flow_crud.add_comfyui_weight(db,node)   
+           logger.debug("open ws socket")
+           ws_url = "ws://"+node.host+":"+node.port+"/ws?clientId="+user_dao.user_id
+           t1 = threading.Thread(target=websocket_client.run_wsclient, args=(ws_url,))
+           t1.start()
+           #websocket_client.run_wsclient(ws_url)    
+    except Exception as e:
+        print(e)
+        logger.debug("some exception")
+    #res =json.dumps(response)
+
+    return re_response    
+
+async def executed(sid:str,msg:dict):
+    db = get_db()
+    status:str
+    if "type" in msg.keys():
+       status = msg["type"]
+    elif "output" in msg.keys():
+       status = "executed"
+    else:
+       logger.debug("unknow event")
+       return
+    logger.debug("status:"+status)
+
+    logger.debug("recall:"+json.dumps(msg))
+    if status == "status":
+        logger.debug("RETURN")
+        return 
+    data:dict
+    data = msg[data]
+    if "prompt_id" in  data.keys:
+        try:
+           prompt_id = msg["data"]["prompt_id"]    
+           logger.debug("prompt_id:"+prompt_id)
+           logger.debug("msg=",json.dumps(msg))
+
+           work_flow_crud.update_wk_router(db,sid,prompt_id,status,json.dumps(msg))
+        except Exception as e:
+           print(e)
+           logger.debug("db exception")
+ 
+    return 
+   
+    
+
+
+
+
+    
+
+      
+
+
 
 
 

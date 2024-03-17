@@ -2,8 +2,8 @@ from sqlalchemy.orm import Session
 
 from dal.user_baseinfo import UserBaseInfo
 
-def get_user(db: Session, login_id: str):
-    return db.query(UserBaseInfo).filter(UserBaseInfo.login_id == login_id).first()
+def get_user(db: Session, client_id: str):
+    return db.query(UserBaseInfo).filter(UserBaseInfo.user_id == client_id).first()
 
 def create_user(db: Session, user: UserBaseInfo):
     

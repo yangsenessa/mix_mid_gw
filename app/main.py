@@ -25,13 +25,12 @@ app.include_router(mixlab_endpoint.router)
   #  responses={418: {"description": "I'm a teapot"}},
 #)
 fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
-ws_url = "ws://127.0.0.1:7890"
 
 if __name__ == '__main__':
-   # uvicorn.run(app)
+   uvicorn.run(app)
     
-    t1 = threading.Thread(target=websocket_client.run_wsclient, args=(ws_url,))
-    t2= threading.Thread(target=uvicorn.run,args=(app,))
-    t1.start()
-    t2.start()
+   # t1 = threading.Thread(target=websocket_client.run_wsclient, args=(ws_url,))
+   # t2= threading.Thread(target=uvicorn.run,args=(app,))
+   # t1.start()
+   # t2.start()
 

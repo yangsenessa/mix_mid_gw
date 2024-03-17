@@ -8,7 +8,7 @@ class UserLoginReq(BaseModel):
     password:str | None = None
 
 class UserLoginRsp(BaseModel):
-    token :str |None = None
+    token :str | None = None
     resultcode:str | None = None
 
 # user regedit

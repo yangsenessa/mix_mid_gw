@@ -1,24 +1,23 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String,DateTime
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String,DateTime,INT
 from sqlalchemy.orm import relationship
 
 from database import Base
 
 class WorkFlowRouterInfo(Base):
     __tablename__ = "tb_workflow_routerinfo"
-    client_id = Column(String, primary_key=True)
-    prompts_id = Column(String)
-    user_id = Column(String)
-    input_keys = Column(String)
-    output_keys = Column(String)
+    prompts_id = Column(String, primary_key=True)
+    client_id = Column(String)
+    ori_body = Column(String)
     comfyui_url = Column(String)
     status = Column(String)
-    gmt_datetile = Column(DateTime)
+    gmt_datetime = Column(DateTime)
 
 
 class  ComfyuiNode(Base):
     __tablename__ = "tb_comfyui_node"
     node_id = Column(String,primary_key=True)
+    host = Column(String)
     url = Column(String)
     port = Column(String)
-    weight = Column(String)
+    weight = Column(INT)
 
