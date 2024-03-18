@@ -30,10 +30,18 @@ def get_db():
         db.close()
 
 @router.post("/mixlab/workflow")
-def query_workflow(request:mixlab_buss_m.WorkflowQuery):
+def query_workflow(request:mixlab_buss_m.WorkflowQuery,db:Session = Depends(get_db)):
     filename = request.filename
     category = request.category
+    client_id = request.token
     data = []
+     #check userInfo
+    user_dao = user_crud.get_user(db,client_id)
+    if user_dao:
+       logger.debug("Authoried user")
+    else:
+        raise HTTPException(status_code=400,detail="Invaid user")
+
     current_path = os.path.abspath(os.path.dirname(__file__))
     app_path=os.path.join(current_path, "workflows")
     category_path=os.path.join(app_path,category)
@@ -137,58 +145,74 @@ async def do_prompts_process(request:Request,db:Session = Depends(get_db)):
     logger.debug(request.headers)
     #Get node
     node = work_flow_crud.get_comfyui_node(db)
-
-    response = requests.post("http://"+node.host+":"+node.port+"/"+node.url,json=body,headers=re_headers)
-    logger.debug(response.content)
-    logger.debug(response.headers)
+    comf_url = "http://"+node.host+":"+node.port+"/"+node.url
 
     try:
+        response = requests.post(comf_url,json=body,headers=re_headers)
+        logger.debug(response.content)
+        logger.debug(response.headers)
         re_response = response.json()
         if re_response["prompt_id"]:
            wk_info =  WorkFlowRouterInfo()  
            wk_info.prompts_id = re_response["prompt_id"]
            wk_info.client_id = user_dao.user_id
            wk_info.status="progress"
+           wk_info.comfyui_url=node.host
            wk_info.gmt_datetime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
            work_flow_crud.create_wk_router(db,wk_info)
-           work_flow_crud.add_comfyui_weight(db,node)   
+           work_flow_crud.add_comfyui_weight(db,node) 
+
            logger.debug("open ws socket")
            ws_url = "ws://"+node.host+":"+node.port+"/ws?clientId="+user_dao.user_id
-           t1 = threading.Thread(target=websocket_client.run_wsclient, args=(ws_url,))
-           t1.start()
+           t1 = threading.Thread(target=websocket_client.run_wsclient, args=(ws_url,db))
+           t1.start() 
+           
+           #queue(comf_url,re_headers)
+
+        
            #websocket_client.run_wsclient(ws_url)    
     except Exception as e:
         print(e)
         logger.debug("some exception")
     #res =json.dumps(response)
 
-    return re_response    
+    return re_response   
 
-async def executed(sid:str,msg:dict):
-    db = get_db()
+def queue(url:str, head:Request.headers):
+    queue_info = []
+    try:
+        while True:
+            response = requests.get(url,headers=head).text
+            logger.debug(response)
+            queue_info = json.loads(response)
+            if(queue_info["exec_info"]["queue_remaining"] == 0):
+                logger.debug("QUEUE STOP")
+                break
+    except Exception as e:
+       logger.debug("QUEUE Exception")
+       print(e)
+
+
+def executed(sid:str,detail:str,db:Session):
     status:str
+    msg = json.loads(detail)
     if "type" in msg.keys():
        status = msg["type"]
-    elif "output" in msg.keys():
-       status = "executed"
-    else:
-       logger.debug("unknow event")
-       return
+   
     logger.debug("status:"+status)
 
     logger.debug("recall:"+json.dumps(msg))
-    if status == "status":
-        logger.debug("RETURN")
-        return 
+    
     data:dict
-    data = msg[data]
-    if "prompt_id" in  data.keys:
+    data = msg["data"]
+    if ("prompt_id" in  data.keys()) and (status == "executed"):
         try:
            prompt_id = msg["data"]["prompt_id"]    
            logger.debug("prompt_id:"+prompt_id)
-           logger.debug("msg=",json.dumps(msg))
+           filenames = json.dumps(data["output"]["images"])
+           logger.debug("filenames="+ filenames)
 
-           work_flow_crud.update_wk_router(db,sid,prompt_id,status,json.dumps(msg))
+           work_flow_crud.update_wk_router(db,sid,prompt_id,status)
         except Exception as e:
            print(e)
            logger.debug("db exception")
