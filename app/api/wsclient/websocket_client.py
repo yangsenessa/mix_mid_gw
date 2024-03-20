@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 import json
 import random
+import threading
 
 class ComfyuiEvent:
     onStatusChanged = []
@@ -36,12 +37,24 @@ async def ws_client(url,db:Session):
             #body = json.loads(msg)
            # logger.debug("WS:JSON:",json.dumps(body))
             ComfyuiEvent.raiseEvent(sid,msg,db)
-                      
+
+async def ws_client_main(url):
+    async with websockets.connect(url) as ws:
+ 
+        while True:
+            msg = await ws.recv()
+            print("WS:JSON:MAIN:"+msg)
+
+def run_wsclient_main(url:str):
+     asyncio.run(ws_client_main(url))                  
 
 # Start the connection
-def run_wsclient(url:str | None,db:Session):
+def run_wsclient(url:str | None,promptid:str,db:Session):
     ComfyuiEvent.onStatusChanged.append(mixlab_endpoint.executed)
     asyncio.run(ws_client(url,db))
+    #t1 = threading.Thread(target=asyncio.run, args=(ws_client(url,db)))
+    #t1.start() 
+
 
 
 

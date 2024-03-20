@@ -14,6 +14,8 @@ import requests
 import json
 from datetime import datetime
 from api.wsclient import websocket_client
+import asyncio
+
 import threading
 import os
 
@@ -127,9 +129,10 @@ def read_workflow_json_files(folder_path ):
 async def do_prompts_process(request:Request,db:Session = Depends(get_db)):
     
     try:
-       body = await request.json()
+       body =await request.json()
        re_requestbody = json.dumps(body)
-    except:
+    except Exception as e:
+        print(e)
         raise HTTPException(status_code=400,detail="Invaid JSON format")
     logger.debug(re_requestbody)
     #check userInfo
@@ -146,30 +149,32 @@ async def do_prompts_process(request:Request,db:Session = Depends(get_db)):
     #Get node
     node = work_flow_crud.get_comfyui_node(db)
     comf_url = "http://"+node.host+":"+node.port+"/"+node.url
+    try:   
+        #websocket_client.ComfyuiEvent.onStatusChanged.append(websocket_client.run_wsclient)
+        #websocket_client.ComfyuiEvent.onStatusChanged.append(executed)
+        #websocket_client.ComfyuiEvent.raiseEvent(ws_url,"",db)
 
-    try:
+        logger.debug("begin post")
+
         response = requests.post(comf_url,json=body,headers=re_headers)
+        work_flow_crud.add_comfyui_weight(db,node) 
+
+        re_response =  response.json()
+        logger.debug("re_response -- ",json.dumps(re_response))
+
+        wk_info =  WorkFlowRouterInfo()  
+        wk_info.prompts_id = re_response["prompt_id"]
+        wk_info.client_id = user_dao.user_id
+        wk_info.status="progress"
+        wk_info.comfyui_url=node.host
+        wk_info.gmt_datetime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        work_flow_crud.create_wk_router(db,wk_info)
+       
+    
         logger.debug(response.content)
         logger.debug(response.headers)
-        re_response = response.json()
-        if re_response["prompt_id"]:
-           wk_info =  WorkFlowRouterInfo()  
-           wk_info.prompts_id = re_response["prompt_id"]
-           wk_info.client_id = user_dao.user_id
-           wk_info.status="progress"
-           wk_info.comfyui_url=node.host
-           wk_info.gmt_datetime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-           work_flow_crud.create_wk_router(db,wk_info)
-           work_flow_crud.add_comfyui_weight(db,node) 
-
-           logger.debug("open ws socket")
-           ws_url = "ws://"+node.host+":"+node.port+"/ws?clientId="+user_dao.user_id
-           t1 = threading.Thread(target=websocket_client.run_wsclient, args=(ws_url,db))
-           t1.start() 
            
-           #queue(comf_url,re_headers)
-
-        
+           #queue(comf_url,re_headers)        
            #websocket_client.run_wsclient(ws_url)    
     except Exception as e:
         print(e)

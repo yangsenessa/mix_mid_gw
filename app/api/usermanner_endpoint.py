@@ -1,12 +1,14 @@
 from fastapi import APIRouter,Depends,HTTPException
 from sqlalchemy.orm import Session
-from dal import user_baseinfo, user_crud
+from dal import user_baseinfo,user_crud,work_flow_crud
 from database import SessionLocal,engine
 from loguru import logger
 import random
 import string
 
+
 from dal.user_baseinfo import UserBaseInfo
+from dal.work_flow_routerinfo import UserWsRootInfo, ComfyuiNode
 
 from models import user_login_m
 
@@ -39,14 +41,15 @@ async def read_user(username: str):
 
 
 @router.post("/userLogin",response_model=user_login_m.UserLoginRsp)
-def userLogin(user_login_req : user_login_m.UserLoginReq, db: Session = Depends(get_db)):
+async def userLogin(user_login_req : user_login_m.UserLoginReq, db: Session = Depends(get_db)):
     user_dao =  user_crud.get_user_by_cellphone(db,user_login_req.cellphone)
     user_login_rsp = user_login_m.UserLoginRsp()
     if user_dao == None :
        logger.debug("user_dao is null")
        user_login_rsp.resultcode="FAIL"
        return user_login_rsp
-     
+    
+    init_user_router(db,user_dao.user_id)
     user_login_rsp.resultcode="SUCCESS"
     user_login_rsp.token=user_dao.user_id
     return user_login_rsp
@@ -82,5 +85,16 @@ def generUserid():
   logger.debug("random="+res)
 
   return res
+
+def init_user_router(db:Session, client_id:str):
+     #Get node
+    node = work_flow_crud.get_comfyui_node(db)
+    ws_url = "ws://"+node.host+":"+node.port+"/ws?clientId="+client_id
+    comf_url = "http://"+node.host+":"+node.port+"/"+node.url
+    user_crud.create_update_user_route_info(db,client_id,ws_url,comf_url,"INIT")
+    
+
+
+   
     
     
