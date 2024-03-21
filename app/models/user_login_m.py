@@ -13,7 +13,7 @@ class UserLoginRsp(BaseModel):
 
 # user regedit
 class UserRegReq(BaseModel):
-    nickName:str | None = None
+    nickname:str | None = None
     email:str | None = None
     cellphone:str | None = None
     exterprisename:str | None = None
