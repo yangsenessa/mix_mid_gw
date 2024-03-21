@@ -3,6 +3,7 @@ from typing import Union
 from fastapi import FastAPI
 from api import usermanner_endpoint
 from api import mixlab_endpoint
+from api import wsserver_endpoint
 from loguru import logger
 import uvicorn
 from api.wsclient import websocket_client
@@ -21,6 +22,7 @@ app = FastAPI()
 
 app.include_router(usermanner_endpoint.router)
 app.include_router(mixlab_endpoint.router)
+app.include_router(wsserver_endpoint)
 
 #app.include_router(items.router)
 #app.include_router(

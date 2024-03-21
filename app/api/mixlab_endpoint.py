@@ -14,6 +14,7 @@ import requests
 import json
 from datetime import datetime
 from api.wsclient import websocket_client
+from api.wsclient.websocket_client_new import WebsocetClient
 import asyncio
 
 import threading
@@ -143,11 +144,11 @@ async def do_prompts_process(request:Request,db:Session = Depends(get_db)):
         raise HTTPException(status_code=400,detail="Invaid user")
 
     re_headers = {
-    "Content-Type": "application/json"
+        "Content-Type": "application/json"
     }
     logger.debug(request.headers)
     #Get node
-    node = work_flow_crud.get_comfyui_node(db)
+    (node,comf_url,ws_url )=init_user_router(db,body['client_id'])
     comf_url = "http://"+node.host+":"+node.port+"/"+node.url
     try:   
         #websocket_client.ComfyuiEvent.onStatusChanged.append(websocket_client.run_wsclient)
@@ -170,12 +171,9 @@ async def do_prompts_process(request:Request,db:Session = Depends(get_db)):
         wk_info.gmt_datetime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         work_flow_crud.create_wk_router(db,wk_info)
        
-    
         logger.debug(response.content)
         logger.debug(response.headers)
            
-           #queue(comf_url,re_headers)        
-           #websocket_client.run_wsclient(ws_url)    
     except Exception as e:
         print(e)
         logger.debug("some exception")
@@ -198,31 +196,40 @@ def queue(url:str, head:Request.headers):
        print(e)
 
 
-def executed(sid:str,detail:str,db:Session):
+def detail_recall(url:str,sid:str,detail:str,db:Session):
     status:str
     msg = json.loads(detail)
     if "type" in msg.keys():
        status = msg["type"]
    
     logger.debug("status:"+status)
-
     logger.debug("recall:"+json.dumps(msg))
     
     data:dict
     data = msg["data"]
-    if ("prompt_id" in  data.keys()) and (status == "executed"):
+    if ("prompt_id" in  data.keys()):
         try:
            prompt_id = msg["data"]["prompt_id"]    
            logger.debug("prompt_id:"+prompt_id)
            filenames = json.dumps(data["output"]["images"])
            logger.debug("filenames="+ filenames)
-
-           work_flow_crud.update_wk_router(db,sid,prompt_id,status)
+           work_flow_crud.update_wk_router(db,sid,prompt_id,filenames,url,status)
         except Exception as e:
            print(e)
            logger.debug("db exception")
  
-    return 
+    return
+
+#
+#ComfyuiNode,comf_url,ws_url,comf_url,ws_url
+#
+def init_user_router(db:Session, client_id:str):
+     #Get node
+    node = work_flow_crud.get_comfyui_node(db)
+    ws_url = "ws://"+node.host+":"+node.port+"/ws?clientId="+client_id
+    comf_url = "http://"+node.host+":"+node.port+"/"+node.url
+    user_crud.create_update_user_route_info(db,client_id,ws_url,comf_url,"INIT")
+    return (node,comf_url,ws_url)
    
     
 

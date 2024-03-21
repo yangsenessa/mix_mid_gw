@@ -49,7 +49,6 @@ async def userLogin(user_login_req : user_login_m.UserLoginReq, db: Session = De
        user_login_rsp.resultcode="FAIL"
        return user_login_rsp
     
-    init_user_router(db,user_dao.user_id)
     user_login_rsp.resultcode="SUCCESS"
     user_login_rsp.token=user_dao.user_id
     return user_login_rsp
@@ -86,12 +85,7 @@ def generUserid():
 
   return res
 
-def init_user_router(db:Session, client_id:str):
-     #Get node
-    node = work_flow_crud.get_comfyui_node(db)
-    ws_url = "ws://"+node.host+":"+node.port+"/ws?clientId="+client_id
-    comf_url = "http://"+node.host+":"+node.port+"/"+node.url
-    user_crud.create_update_user_route_info(db,client_id,ws_url,comf_url,"INIT")
+
     
 
 
