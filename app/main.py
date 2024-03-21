@@ -8,10 +8,7 @@ import uvicorn
 from api.wsclient import websocket_client
 import mysql.connector
 from database import SessionLocal
-import time
-import threading
-import asyncio
-import aiohttp
+
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -58,10 +55,10 @@ def init_router():
     
 jobstores = {'default': SQLAlchemyJobStore(url='sqlite:///jobs.sqlite')}
 scheduler = AsyncIOScheduler(jobstores=jobstores)
-scheduler.start()
+#scheduler.start()
 print("scheduler starting...")
 
-scheduler.add_job(init_router, "interval",max_instances=10, seconds=5)  
+#scheduler.add_job(init_router, "interval",max_instances=10, seconds=5)  
 #asyncio.get_event_loop().run_forever() 
 print("scheduler added...")
 
