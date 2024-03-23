@@ -70,4 +70,3 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str,db: Session = 
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        await manager.broadcast(f"用户-{user}-离开")

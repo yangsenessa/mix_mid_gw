@@ -13,3 +13,10 @@ class UserBaseInfo(Base):
     password = Column(String)
 
 
+
+class UserWsRouterInfo(Base):
+    __tablename__="tb_user_ws_router"
+    client_id =Column(String(64),primary_key=True)
+    ws_url=Column(String)
+    comf_url=Column(String)
+    status=Column(String)

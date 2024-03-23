@@ -8,7 +8,8 @@ import string
 
 
 from dal.user_baseinfo import UserBaseInfo
-from dal.work_flow_routerinfo import UserWsRootInfo, ComfyuiNode
+from dal.work_flow_routerinfo import WorkFlowRouterInfo,ComfyuiNode
+
 
 from models import user_login_m
 
@@ -48,7 +49,7 @@ async def userLogin(user_login_req : user_login_m.UserLoginReq, db: Session = De
        logger.debug("user_dao is null")
        user_login_rsp.resultcode="FAIL"
        return user_login_rsp
-    
+    init_user_router(user_dao.user_id,db)
     user_login_rsp.resultcode="SUCCESS"
     user_login_rsp.token=user_dao.user_id
     return user_login_rsp
@@ -84,6 +85,19 @@ def generUserid():
   logger.debug("random="+res)
 
   return res
+
+#
+#ComfyuiNode,comf_url,ws_url,comf_url,ws_url
+#
+def init_user_router(db:Session, client_id:str):
+     #Get node
+    node = work_flow_crud.get_comfyui_node(db)
+    ws_url = "ws://"+node.host+":"+node.port+"/ws?clientId="+client_id
+    comf_url = "http://"+node.host+":"+node.port+"/"+node.url
+    user_crud.create_update_user_route_info(db,client_id,ws_url,comf_url,"INIT")
+    work_flow_crud.add_comfyui_weight(db,node)
+    return (node,comf_url,ws_url)
+
 
 
     

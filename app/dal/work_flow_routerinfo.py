@@ -21,10 +21,4 @@ class  ComfyuiNode(Base):
     port = Column(String)
     weight = Column(INT)
 
-class UserWsRootInfo(Base):
-    __tablename__="tb_user_ws_root"
-    client_id = Column(String,primary_key=True)
-    ws_url = Column(String)
-    comf_url = Column(String)
-    status = Column(String)
 

@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 
-from dal.user_baseinfo import UserBaseInfo
-from dal.work_flow_routerinfo import UserWsRootInfo
+from dal.user_baseinfo import UserBaseInfo,UserWsRouterInfo
+
+from loguru import logger
 
 def get_user(db: Session, client_id: str):
     return db.query(UserBaseInfo).filter(UserBaseInfo.user_id == client_id).first()
@@ -23,18 +24,33 @@ def get_user_by_cellphone(db:Session, cellphone:str):
 
 # init user router infu
 def create_update_user_route_info(db:Session,client_id:str,ws_url:str, comfyui_url:str, status:str):
-    userWsRootInfo = UserWsRootInfo(client_id=client_id,ws_url=ws_url,comf_url=comfyui_url,status=status)
-    qry_userWsRootInfo = db.query(UserWsRootInfo).filter(UserWsRootInfo.client_id == client_id).first()
-    if qry_userWsRootInfo:
-        qry_userWsRootInfo.comf_url = comfyui_url
-        qry_userWsRootInfo.ws_url = ws_url
-        qry_userWsRootInfo.status = status
+    userWsRouterInfo = UserWsRouterInfo(client_id=client_id,ws_url=ws_url,comf_url=comfyui_url,status=status)
+    qry_userWsRouterInfo = db.query(UserWsRouterInfo).filter(UserWsRouterInfo.client_id == client_id).first()
+    if qry_userWsRouterInfo:
+        qry_userWsRouterInfo.comf_url = comfyui_url
+        qry_userWsRouterInfo.ws_url = ws_url
+        qry_userWsRouterInfo.status = status
         db.commit()
-        db.refresh(qry_userWsRootInfo)
+        db.refresh(qry_userWsRouterInfo)
+        userWsRouterInfo = qry_userWsRouterInfo
     else:
-        db.add(userWsRootInfo)
+        db.add(userWsRouterInfo)
         db.commit()
-        db.refresh(userWsRootInfo)
-
+        db.refresh(userWsRouterInfo)
+    return userWsRouterInfo
+    
+# No need validation the status, connect would be reused,but there is other function should
+# be generrated to confirm the user only can maintail one router during certain session
+def fetch_user_ws_router(db:Session, client_id:str):
+    qry_userWsRouterInfo = db.query(UserWsRouterInfo).filter(UserWsRouterInfo.client == client_id)
+    return qry_userWsRouterInfo
   
 
+def update_user_ws_status(db:Session, client_id:str, status:str):
+        qry_userWsRouterInfo = db.query(UserWsRouterInfo).filter(UserWsRouterInfo.client_id == client_id).first()
+        if qry_userWsRouterInfo:
+            qry_userWsRouterInfo.status = status
+            db.commit()
+            db.refresh(qry_userWsRouterInfo)
+        else:
+            logger.error("update user_ws_router ,entity not exist" + client_id)

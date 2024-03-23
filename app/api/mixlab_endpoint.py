@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from models import mixlab_buss_m, user_login_m
 from dal.work_flow_routerinfo import WorkFlowRouterInfo,ComfyuiNode
+from dal.user_baseinfo import UserWsRouterInfo
 
 from loguru import logger
 from urllib.parse import urlencode
@@ -148,17 +149,18 @@ async def do_prompts_process(request:Request,db:Session = Depends(get_db)):
     }
     logger.debug(request.headers)
     #Get node
-    (node,comf_url,ws_url )=init_user_router(db,body['client_id'])
-    comf_url = "http://"+node.host+":"+node.port+"/"+node.url
+    user_ws_router:UserWsRouterInfo
+
+    user_ws_router = user_crud.fetch_user_ws_router(db,body["client_id"])
+    comf_url = user_ws_router.comf_url
     try:   
         #websocket_client.ComfyuiEvent.onStatusChanged.append(websocket_client.run_wsclient)
         #websocket_client.ComfyuiEvent.onStatusChanged.append(executed)
         #websocket_client.ComfyuiEvent.raiseEvent(ws_url,"",db)
 
         logger.debug("begin post")
-
+        
         response = requests.post(comf_url,json=body,headers=re_headers)
-        work_flow_crud.add_comfyui_weight(db,node) 
 
         re_response =  response.json()
         logger.debug("re_response -- ",json.dumps(re_response))
@@ -167,7 +169,7 @@ async def do_prompts_process(request:Request,db:Session = Depends(get_db)):
         wk_info.prompts_id = re_response["prompt_id"]
         wk_info.client_id = user_dao.user_id
         wk_info.status="progress"
-        wk_info.comfyui_url=node.host
+        wk_info.comfyui_url=comf_url
         wk_info.gmt_datetime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         work_flow_crud.create_wk_router(db,wk_info)
        
@@ -220,16 +222,11 @@ def detail_recall(url:str,sid:str,detail:str,db:Session):
  
     return
 
-#
-#ComfyuiNode,comf_url,ws_url,comf_url,ws_url
-#
-def init_user_router(db:Session, client_id:str):
-     #Get node
-    node = work_flow_crud.get_comfyui_node(db)
-    ws_url = "ws://"+node.host+":"+node.port+"/ws?clientId="+client_id
-    comf_url = "http://"+node.host+":"+node.port+"/"+node.url
-    user_crud.create_update_user_route_info(db,client_id,ws_url,comf_url,"INIT")
-    return (node,comf_url,ws_url)
+
+#nodeinfo=(ws_url, comf_url)
+def creat_ws_connect(client_id:str,ws_url:str, db:Session):
+    logger.debug("begin create ws client")
+    WebsocetClient.start(ws_url,db)
    
     
 

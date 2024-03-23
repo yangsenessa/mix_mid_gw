@@ -22,6 +22,7 @@ class WebsocetClient(object):
         super(WebsocetClient, self).__init__()
         self.url = "ws://echo.websocket.org/"
         self.ws = None
+        self.db = None
 
     def on_message(self, sid:str, detail:str, db:Session):
         if self.if_executed(sid,detail,db):
@@ -58,17 +59,17 @@ class WebsocetClient(object):
     def if_executed(detail:str):
         status:str
         detail_json = json.loads(detail)
-        
+        i
         if "type" in  detail_json.keys():
             status=detail_json["type"]
         
         return "type" == status
 
 
-    def start(self):
+    def start(self,ws_url:str,db:Session):
         websocket.enableTrace(True)  # 开启运行状态追踪。debug 的时候最好打开他，便于追踪定位问题。
 
-        self.ws = WebSocketApp(self.url,
+        self.ws = WebSocketApp(ws_url,
                                on_open=self.on_open,
                                on_message=self.on_message,
                                on_error=self.on_error,
