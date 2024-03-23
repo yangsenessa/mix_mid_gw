@@ -16,8 +16,7 @@ import json
 from datetime import datetime
 from api.wsclient import websocket_client
 from api.wsclient.websocket_client_new import WebsocetClient
-import asyncio
-
+import time
 import threading
 import os
 
@@ -152,13 +151,18 @@ async def do_prompts_process(request:Request,db:Session = Depends(get_db)):
     user_ws_router:UserWsRouterInfo
 
     user_ws_router = user_crud.fetch_user_ws_router(db,body["client_id"])
-    comf_url = user_ws_router.comf_url
+    if(user_ws_router) :
+        comf_url = user_ws_router.comf_url
+        ws_url = user_ws_router.ws_url
+    else:
+        raise HTTPException(status_code=400,detail="Invaid user")
     try:   
-        #websocket_client.ComfyuiEvent.onStatusChanged.append(websocket_client.run_wsclient)
-        #websocket_client.ComfyuiEvent.onStatusChanged.append(executed)
-        #websocket_client.ComfyuiEvent.raiseEvent(ws_url,"",db)
-
-        logger.debug("begin post")
+        logger.debug("begin create ws client")
+        t1=threading.Thread(target=WebsocetClient().start,args=(body["client_id"],ws_url,db))
+        t1.start()
+        time.sleep(2)
+        logger.debug("begin post:" + "  "+ comf_url)
+    
         
         response = requests.post(comf_url,json=body,headers=re_headers)
 
@@ -208,7 +212,22 @@ def detail_recall(url:str,sid:str,detail:str,db:Session):
     logger.debug("recall:"+json.dumps(msg))
     
     data:dict
+    output:dict
     data = msg["data"]
+    if "output" in data.keys():
+        output = data["output"]
+        logger.debug("recall...")
+    else:
+        return False
+    if  "images" in output.keys():
+        filenames = json.dumps(output["images"])
+    elif  "text" in output.keys():
+        filenames = json.dumps(output["text"])
+    elif  "gifts" in output.keys():
+        filenames = json.dumps(output["gifts"])
+    else:
+        return False
+
     if ("prompt_id" in  data.keys()):
         try:
            prompt_id = msg["data"]["prompt_id"]    
@@ -220,13 +239,9 @@ def detail_recall(url:str,sid:str,detail:str,db:Session):
            print(e)
            logger.debug("db exception")
  
-    return
+    return True
 
 
-#nodeinfo=(ws_url, comf_url)
-def creat_ws_connect(client_id:str,ws_url:str, db:Session):
-    logger.debug("begin create ws client")
-    WebsocetClient.start(ws_url,db)
    
     
 

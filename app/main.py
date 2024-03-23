@@ -13,7 +13,7 @@ app = FastAPI()
 
 app.include_router(usermanner_endpoint.router)
 app.include_router(mixlab_endpoint.router)
-app.include_router(wsserver_endpoint)
+app.include_router(wsserver_endpoint.router)
 
 #app.include_router(items.router)
 #app.include_router(

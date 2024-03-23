@@ -49,7 +49,7 @@ async def userLogin(user_login_req : user_login_m.UserLoginReq, db: Session = De
        logger.debug("user_dao is null")
        user_login_rsp.resultcode="FAIL"
        return user_login_rsp
-    init_user_router(user_dao.user_id,db)
+    init_user_router(db,user_dao.user_id)
     user_login_rsp.resultcode="SUCCESS"
     user_login_rsp.token=user_dao.user_id
     return user_login_rsp

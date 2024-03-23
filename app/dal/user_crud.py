@@ -42,7 +42,7 @@ def create_update_user_route_info(db:Session,client_id:str,ws_url:str, comfyui_u
 # No need validation the status, connect would be reused,but there is other function should
 # be generrated to confirm the user only can maintail one router during certain session
 def fetch_user_ws_router(db:Session, client_id:str):
-    qry_userWsRouterInfo = db.query(UserWsRouterInfo).filter(UserWsRouterInfo.client == client_id)
+    qry_userWsRouterInfo = db.query(UserWsRouterInfo).filter(UserWsRouterInfo.client_id == client_id).first()
     return qry_userWsRouterInfo
   
 

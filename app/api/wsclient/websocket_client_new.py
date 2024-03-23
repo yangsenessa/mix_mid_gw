@@ -1,19 +1,12 @@
 # -*- coding:utf-8 -*-
-
 import websocket
-from websocket import WebSocketApp
 from database import SessionLocal
 from sqlalchemy.orm import Session
 import json
 from loguru import logger
 from api import mixlab_endpoint
 from api import wsserver_endpoint
-
-
-try:
-    import thread
-except ImportError:
-    import _thread as thread
+import threading
 import time
 
 
@@ -23,20 +16,22 @@ class WebsocetClient(object):
         self.url = "ws://echo.websocket.org/"
         self.ws = None
         self.db = None
+        self.sid = None
+        
 
-    def on_message(self, sid:str, detail:str, db:Session):
-        if self.if_executed(sid,detail,db):
-            mixlab_endpoint.detail_recall(sid,detail,db)
-            self.ws.close()
+    def on_message(self, source,message):
+        if self.if_executed(message):
+            if  mixlab_endpoint.detail_recall(self.url,self.sid,message,self.db):
+                self.ws.close()
 
         print("####### on_message #######")
-        print("message：%s" % detail)
+        print("message：%s" % message)
 
-    def on_error(self, error):
+    def on_error(self,*error):
         print("####### on_error #######")
-        print("error：%s" % error)
+        print("error：" + str(error) )
 
-    def on_close(self):
+    def on_close(self,source,close_status_code,close_msg):
         print("####### on_close #######")
 
     def on_ping(self, message):
@@ -47,35 +42,34 @@ class WebsocetClient(object):
         print("####### on_pong #######")
         print("pong message：%s" % message)
 
-    def on_open(self):
+    def on_open(self,*message):
         print("####### on_open #######")
-
-        thread.start_new_thread(self.run, ())
 
     def run(self, sid:str,detail:str,db:Session):
         while True:
             time.sleep(1)
            
-    def if_executed(detail:str):
+    def if_executed(self,message):
         status:str
-        detail_json = json.loads(detail)
-        i
+        detail_json = json.loads(message)
         if "type" in  detail_json.keys():
             status=detail_json["type"]
         
-        return "type" == status
+        return "executed" == status
 
 
-    def start(self,ws_url:str,db:Session):
-        websocket.enableTrace(True)  # 开启运行状态追踪。debug 的时候最好打开他，便于追踪定位问题。
-
-        self.ws = WebSocketApp(ws_url,
+    def start(self,client_id:str,ws_url:str,db:Session):
+    
+        logger.debug("Begin create WebSocketApp:" + ws_url)
+        self.ws = websocket.WebSocketApp(ws_url,
                                on_open=self.on_open,
                                on_message=self.on_message,
                                on_error=self.on_error,
                                on_close=self.on_close)
+        self.db = db
+        self.sid = client_id
         # self.ws.on_open = self.on_open  # 也可以先创建对象再这样指定回调函数。run_forever 之前指定回调函数即可。
-
+        #threading.Thread(target=self.ws.run_forever()) 
         self.ws.run_forever()
 
 

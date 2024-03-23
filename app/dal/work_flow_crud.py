@@ -11,14 +11,16 @@ def create_wk_router(db:Session, wkrouter:WorkFlowRouterInfo):
     return wkrouter
 
 def update_wk_router(db:Session, client_id:str,prompts_id:str,ori_body:str,comfyui_url:str,status:str):
-    logger.debug("update_wk_router"+client_id+"-"+prompts_id)
+    logger.debug("update_wk_router:")
+    logger.debug(client_id)
+    logger.debug(prompts_id)
     db_wkrouter = db.query(WorkFlowRouterInfo).filter(
                        WorkFlowRouterInfo.client_id == client_id
                            ,WorkFlowRouterInfo.prompts_id == prompts_id).first()
     if db_wkrouter:
        db_wkrouter.status=status
        db_wkrouter.ori_body = ori_body
-       db_wkrouter.gmt_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+       db_wkrouter.gmt_datetime = datetime.time().strftime("%Y-%m-%d %H:%M:%S")
        db.commit()
        db.refresh(db_wkrouter)
        logger.debug("update success")
