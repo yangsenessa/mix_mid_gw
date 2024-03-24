@@ -74,6 +74,7 @@ class WebsocetClient(object):
                                on_close=self.on_close)
         database =  Database()
         self.db = database.get_db()
+        self.url = ws_url
         self.sid = client_id
         # self.ws.on_open = self.on_open  # 也可以先创建对象再这样指定回调函数。run_forever 之前指定回调函数即可。
         #threading.Thread(target=self.ws.run_forever()) 

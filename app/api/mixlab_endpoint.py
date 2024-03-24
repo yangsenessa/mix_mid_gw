@@ -6,7 +6,7 @@ from dal.work_flow_routerinfo import WorkFlowRouterInfo,ComfyuiNode
 from dal.user_baseinfo import UserWsRouterInfo
 
 from loguru import logger
-from urllib.parse import urlencode
+from urllib.parse import quote
 from sqlalchemy.orm import Session
 from dal import user_baseinfo, user_crud, work_flow_crud
 from database import SessionLocal, engine
@@ -245,13 +245,16 @@ def detail_recall(url:str,sid:str,detail:str,db:Session):
             return False
     if filenames:   
        logger.debug("FILENAME:"+ filenames)
+
     logger.debug("DATA:", json.dumps(data))
     if ("prompt_id" in  data.keys()):
         try:
             prompt_id = msg["data"]["prompt_id"]    
             logger.debug("prompt_id:"+prompt_id)
             if filenames:
-               work_flow_crud.update_wk_router(db,sid,prompt_id,detail,filenames,url,status)
+               gw_filenames = construct_comf_file_url(url,filenames)
+               work_flow_crud.update_wk_router(db,sid,prompt_id,detail,gw_filenames,url,status)
+
             else:
                 work_flow_crud.update_wk_router(db,sid,prompt_id,detail,None,url,status)
 
@@ -263,6 +266,74 @@ def detail_recall(url:str,sid:str,detail:str,db:Session):
         return True
     else:
         return False
+
+def construct_comf_file_url(url:str,file_names:str):
+    file_obj = json.loads(file_names)
+    file_item=[]
+    logger.debug("ORI WS URL:" + url)
+
+    url_split = url.split(":")
+    
+    logger.debug("ORI PORT:" + str(url_split))
+    logger.debug("ORI PORT:" + str(url_split[2]))
+    logger.debug("ORI PORT:" + str(url_split[2].split("/")))
+
+
+    port=url_split[2].split("/")[0]
+
+    raw_url = "http:" +url_split[1] +":"+port
+
+    logger.debug("RBUIILD URL:" + raw_url)
+
+    for item in file_obj:
+        logger.debug("ITEM:"+ str(item))
+        logger.debug("filename="+item["filename"])
+        logger.debug("subfolder="+str(item["subfolder"]))
+        logger.debug("type="+item["type"])
+        
+        fileurl = raw_url+"/view?filename="
+        fileurl = raw_url+"/view?filename="+quote(item["filename"])+"&type="+item["type"]+"&subfolder="+quote(item["subfolder"])+"&t="+ str(int(round(time.time() * 1000)))
+        #fileurl=fileurl.join(quote(item["filename"])).join("&type=").join(item["type"]).join("&subfolder=").join(quote(item["subfolder"])).join("&t=").join(str(int(round(time.time() * 1000))))
+
+        logger.debug("FILE URL FOR CLIENT:" + fileurl)   
+        fetch_comf_file(fileurl, item["subfolder"],item["filename"])
+        file_item.append(item)
+
+    return json.dumps(file_item)
+
+def fetch_comf_file(url:str,subfolder:str,filename:str):
+    current_path = os.path.abspath(os.path.dirname(__file__))
+    app_path=os.path.join(current_path, "tempfiles")
+    category_path=os.path.join(app_path,subfolder)
+    if not os.path.exists(category_path):
+        os.mkdir(category_path)
+   
+    if(len(subfolder)>0):
+        comfyui_res_path = category_path
+    else:
+        comfyui_res_path = app_path
+    
+    comfyui_file = os.path.join(comfyui_res_path,filename)
+    
+    logger.debug(comfyui_file)
+
+    res = requests.get(url)
+    try:
+        with open(comfyui_file,"wb") as res_file:
+            res_file.write(res.content)
+    except Exception as e:
+        print(e)
+
+           
+
+
+
+
+
+    
+    
+
+
     
 
    
