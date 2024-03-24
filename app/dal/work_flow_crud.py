@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from dal.work_flow_routerinfo import WorkFlowRouterInfo,ComfyuiNode
 from loguru import logger
-import datetime
+from datetime import datetime
 
 
 def create_wk_router(db:Session, wkrouter:WorkFlowRouterInfo):
@@ -10,7 +10,7 @@ def create_wk_router(db:Session, wkrouter:WorkFlowRouterInfo):
     db.refresh(wkrouter)
     return wkrouter
 
-def update_wk_router(db:Session, client_id:str,prompts_id:str,ori_body:str,comfyui_url:str,status:str):
+def update_wk_router(db:Session, client_id:str,prompts_id:str,ori_body:str,filenames,comfyui_url:str,status:str):
     logger.debug("update_wk_router:")
     logger.debug(client_id)
     logger.debug(prompts_id)
@@ -20,14 +20,16 @@ def update_wk_router(db:Session, client_id:str,prompts_id:str,ori_body:str,comfy
     if db_wkrouter:
        db_wkrouter.status=status
        db_wkrouter.ori_body = ori_body
-       db_wkrouter.gmt_datetime = datetime.time().strftime("%Y-%m-%d %H:%M:%S")
+       now = datetime.now()
+       db_wkrouter.gmt_datetime = now.strftime("%Y-%m-%d %H:%M:%S")  
+       if filenames:
+           db_wkrouter.filenames = filenames
        db.commit()
        db.refresh(db_wkrouter)
        logger.debug("update success")
     else:
-        db_wkrouter = WorkFlowRouterInfo(prompts_id=prompts_id,client_id=client_id,ori_body=ori_body,comfyui_url=comfyui_url,
+        db_wkrouter = WorkFlowRouterInfo(prompts_id=prompts_id,client_id=client_id,ori_body=ori_body,filenames=filenames,comfyui_url=comfyui_url,
                                          status=status,gmt_datetime=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
         db.commit()
         db.refresh(db_wkrouter)
         logger.debug("restore wkrouter")

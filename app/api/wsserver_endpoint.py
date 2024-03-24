@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter,Depends, WebSocket, WebSocketDisconnect
 from models import mixlab_buss_m
 from dal.work_flow_routerinfo import WorkFlowRouterInfo
+from dal import work_flow_crud
 from starlette.requests import HTTPConnection
 from database import SessionLocal,engine
 from sqlalchemy.orm import Session
@@ -11,6 +12,7 @@ from sqlalchemy.orm import Session
 from api import mixlab_endpoint
 
 from loguru import logger
+import time
 
 
 router = APIRouter()
@@ -56,16 +58,19 @@ def get_db():
     finally:
         db.close()
 
-@router.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: str,db: Session = Depends(get_db)):
+@router.websocket("/ws/{client_id}{prompt_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str,prompt_id,db: Session = Depends(get_db)):
 
     await manager.connect(websocket)
-    (node,comfyui_url, ws_url) = mixlab_endpoint.init_user_router(db, client_id)
     
     try:
         while True:
-            data = await websocket.receive_text()
-            mixlab_endpoint.detail_recall(websocket.url,client_id,data,db)
+            time.sleep(1)
+            workFlowRouterInfo = work_flow_crud.get_wk_router_clientid_promptid(db,client_id,prompt_id)
+            if workFlowRouterInfo:
+                websocket.send_json(workFlowRouterInfo.ori_body)
+                if(len(workFlowRouterInfo.filenames)):
+                    websocket.close()
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)

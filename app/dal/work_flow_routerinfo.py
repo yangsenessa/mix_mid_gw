@@ -8,6 +8,7 @@ class WorkFlowRouterInfo(Base):
     prompts_id = Column(String, primary_key=True)
     client_id = Column(String)
     ori_body = Column(String)
+    filenames = Column(String)
     comfyui_url = Column(String)
     status = Column(String)
     gmt_datetime = Column(DateTime)

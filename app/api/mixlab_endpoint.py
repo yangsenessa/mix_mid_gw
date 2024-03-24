@@ -1,4 +1,4 @@
-from fastapi import APIRouter,Depends,HTTPException,Request
+from fastapi import APIRouter,Depends,HTTPException,Request,Query
 from fastapi.responses import JSONResponse
 
 from models import mixlab_buss_m, user_login_m
@@ -13,9 +13,9 @@ from database import SessionLocal, engine
 
 import requests
 import json
-from datetime import datetime
 from api.wsclient import websocket_client
 from api.wsclient.websocket_client_new import WebsocetClient
+from datetime import datetime
 import time
 import threading
 import os
@@ -112,7 +112,7 @@ def read_workflow_json_files(folder_path ):
         try:
             with open(file_path) as json_file:
                 json_data = json.load(json_file)
-                creation_time=datetime.datetime.fromtimestamp(os.path.getctime(file_path))
+                creation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 numeric_timestamp = creation_time.timestamp()
                 file_info = {
                     'filename': file,
@@ -160,7 +160,7 @@ async def do_prompts_process(request:Request,db:Session = Depends(get_db)):
         logger.debug("begin create ws client")
         t1=threading.Thread(target=WebsocetClient().start,args=(body["client_id"],ws_url,db))
         t1.start()
-        time.sleep(2)
+        time.sleep(1)
         logger.debug("begin post:" + "  "+ comf_url)
     
         
@@ -187,16 +187,32 @@ async def do_prompts_process(request:Request,db:Session = Depends(get_db)):
 
     return re_response   
 
+#queue
+@router.get("/mixlab/queue/")
+def do_queue_process(client_id = Query(None),prompt_id = Query(None),db:Session = Depends(get_db)):
+    #Get node
+    user_ws_router:UserWsRouterInfo
+    logger.debug("client_id="+client_id)
+    logger.debug("prompt_id="+prompt_id)
+    user_ws_router = user_crud.fetch_user_ws_router(db,client_id)
+    if(user_ws_router) :
+        comf_url = user_ws_router.comf_url
+        queue_url = str.replace(comf_url,"prompt","queue")
+        logger.debug("QUEUE URL:"+ queue_url)
+        re_headers = {
+             "Content-Type": "application/json"
+        }
+        return queue(queue_url,re_headers)
+    else:
+        raise HTTPException(status_code=400,detail="Invaid user")
+    queue(comf_url)
+
+
 def queue(url:str, head:Request.headers):
-    queue_info = []
     try:
-        while True:
-            response = requests.get(url,headers=head).text
-            logger.debug(response)
-            queue_info = json.loads(response)
-            if(queue_info["exec_info"]["queue_remaining"] == 0):
-                logger.debug("QUEUE STOP")
-                break
+        response = requests.get(url,headers=head).text
+        logger.debug(response)
+        return response
     except Exception as e:
        logger.debug("QUEUE Exception")
        print(e)
@@ -213,34 +229,41 @@ def detail_recall(url:str,sid:str,detail:str,db:Session):
     
     data:dict
     output:dict
+    prompt_id:str
+    filenames:str|None = None
     data = msg["data"]
     if "output" in data.keys():
         output = data["output"]
         logger.debug("recall...")
-    else:
-        return False
-    if  "images" in output.keys():
-        filenames = json.dumps(output["images"])
-    elif  "text" in output.keys():
-        filenames = json.dumps(output["text"])
-    elif  "gifts" in output.keys():
-        filenames = json.dumps(output["gifts"])
-    else:
-        return False
-
+        if  "images" in output.keys():
+            filenames = json.dumps(output["images"])
+        elif  "text" in output.keys():
+            filenames = json.dumps(output["text"])
+        elif  "gifts" in output.keys():
+            filenames = json.dumps(output["gifts"])
+        if not filenames:
+            return False
+    if filenames:   
+       logger.debug("FILENAME:"+ filenames)
+    logger.debug("DATA:", json.dumps(data))
     if ("prompt_id" in  data.keys()):
         try:
-           prompt_id = msg["data"]["prompt_id"]    
-           logger.debug("prompt_id:"+prompt_id)
-           filenames = json.dumps(data["output"]["images"])
-           logger.debug("filenames="+ filenames)
-           work_flow_crud.update_wk_router(db,sid,prompt_id,filenames,url,status)
-        except Exception as e:
-           print(e)
-           logger.debug("db exception")
- 
-    return True
+            prompt_id = msg["data"]["prompt_id"]    
+            logger.debug("prompt_id:"+prompt_id)
+            if filenames:
+               work_flow_crud.update_wk_router(db,sid,prompt_id,detail,filenames,url,status)
+            else:
+                work_flow_crud.update_wk_router(db,sid,prompt_id,detail,None,url,status)
 
+        except Exception as e:
+            print(e)
+            logger.debug("db exception")
+
+    if  status =="executed" and filenames:
+        return True
+    else:
+        return False
+    
 
    
     

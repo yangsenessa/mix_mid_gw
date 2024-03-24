@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 import websocket
-from database import SessionLocal
+from database import Database
 from sqlalchemy.orm import Session
 import json
 from loguru import logger
@@ -9,6 +9,12 @@ from api import wsserver_endpoint
 import threading
 import time
 
+database = Database()
+engine = database.get_db_connection()
+
+
+
+
 
 class WebsocetClient(object):
     def __init__(self):
@@ -16,11 +22,11 @@ class WebsocetClient(object):
         self.url = "ws://echo.websocket.org/"
         self.ws = None
         self.db = None
-        self.sid = None
+        self.sid =None
         
 
     def on_message(self, source,message):
-        if self.if_executed(message):
+        if self.if_execute_type(message):
             if  mixlab_endpoint.detail_recall(self.url,self.sid,message,self.db):
                 self.ws.close()
 
@@ -49,13 +55,13 @@ class WebsocetClient(object):
         while True:
             time.sleep(1)
            
-    def if_executed(self,message):
+    def if_execute_type(self,message):
         status:str
         detail_json = json.loads(message)
         if "type" in  detail_json.keys():
             status=detail_json["type"]
         
-        return "executed" == status
+        return "status" != status
 
 
     def start(self,client_id:str,ws_url:str,db:Session):
@@ -66,7 +72,8 @@ class WebsocetClient(object):
                                on_message=self.on_message,
                                on_error=self.on_error,
                                on_close=self.on_close)
-        self.db = db
+        database =  Database()
+        self.db = database.get_db()
         self.sid = client_id
         # self.ws.on_open = self.on_open  # 也可以先创建对象再这样指定回调函数。run_forever 之前指定回调函数即可。
         #threading.Thread(target=self.ws.run_forever()) 
