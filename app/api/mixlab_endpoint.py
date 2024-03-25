@@ -24,8 +24,8 @@ import oss2
 
 
 router = APIRouter()
-access_key_id = ''
-access_key_secret = ''
+access_key_id = 'LTAI5tBXTV9yiiqu2rsRjEyj'
+access_key_secret = 'EUwQQdLvTJQbhFwM5n4TyrAl6oN8WJ'
 endpoint = 'http://oss-cn-beijing.aliyuncs.com'
 # Dependency
 def get_db():
