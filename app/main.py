@@ -9,6 +9,7 @@ import uvicorn
 
 
 
+
 app = FastAPI()
 
 app.include_router(usermanner_endpoint.router)
@@ -24,6 +25,12 @@ app.include_router(wsserver_endpoint.router)
   #  responses={418: {"description": "I'm a teapot"}},
 #)
 fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
+
+
+
+#result = bucket.put_object("sample.txt", "hello world")
+
+#print("Returns status code: ", result.status)
 
 
 

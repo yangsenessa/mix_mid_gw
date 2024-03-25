@@ -19,11 +19,14 @@ from datetime import datetime
 import time
 import threading
 import os
+import oss2
 
 
 
 router = APIRouter()
-
+access_key_id = 'LTAI5tBXTV9yiiqu2rsRjEyj'
+access_key_secret = 'EUwQQdLvTJQbhFwM5n4TyrAl6oN8WJ'
+endpoint = 'http://oss-cn-beijing.aliyuncs.com'
 # Dependency
 def get_db():
     db = SessionLocal()
@@ -31,6 +34,20 @@ def get_db():
         yield db
     finally:
         db.close()
+
+#oss
+def get_oss_bucket():
+   bucket_name = 'mixlabapp'
+   bucket = oss2.Bucket(oss2.Auth(access_key_id, access_key_secret), endpoint, bucket_name=bucket_name)
+   return bucket
+
+def get_oss_download_url(key:str):
+    bucket = get_oss_bucket()
+    url =  bucket.sign_url('GET', key, 3600*24*7)
+    return url
+
+
+
 
 @router.post("/mixlab/workflow")
 def query_workflow(request:mixlab_buss_m.WorkflowQuery,db:Session = Depends(get_db)):
@@ -296,8 +313,8 @@ def construct_comf_file_url(url:str,file_names:str):
         #fileurl=fileurl.join(quote(item["filename"])).join("&type=").join(item["type"]).join("&subfolder=").join(quote(item["subfolder"])).join("&t=").join(str(int(round(time.time() * 1000))))
 
         logger.debug("FILE URL FOR CLIENT:" + fileurl)   
-        fetch_comf_file(fileurl, item["subfolder"],item["filename"])
-        file_item.append(item)
+        ossKey_item = fetch_comf_file(fileurl, item["subfolder"],item["filename"])
+        file_item.append(ossKey_item)
 
     return json.dumps(file_item)
 
@@ -320,7 +337,16 @@ def fetch_comf_file(url:str,subfolder:str,filename:str):
     res = requests.get(url)
     try:
         with open(comfyui_file,"wb") as res_file:
-            res_file.write(res.content)
+           res_file.write(res.content)
+        if len(subfolder)>0 :
+           oss_key=subfolder+"_"+filename
+        else:
+            oss_key=filename
+        result = get_oss_bucket().put_object_from_file(oss_key,comfyui_file)
+        os.remove(comfyui_file)
+
+        url = get_oss_download_url(oss_key)
+        return url
     except Exception as e:
         print(e)
 
