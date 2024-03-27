@@ -1,4 +1,4 @@
-from fastapi import APIRouter,Depends,HTTPException,Request,Query
+from fastapi import APIRouter,Depends,HTTPException,Request,Query,File, UploadFile
 from fastapi.responses import JSONResponse
 
 from models import mixlab_buss_m, user_login_m
@@ -37,10 +37,14 @@ def get_db():
 #oss
 def get_oss_bucket():
    bucket_name = 'mixlabapp'
+   access_key_id=os.getenv("OSS_ACCESS_KEY_ID")
+   access_key_secret = os.getenv("OSS_ACCESS_KEY_SECRET")
+   
    bucket = oss2.Bucket(oss2.Auth(access_key_id, access_key_secret), endpoint, bucket_name=bucket_name)
    return bucket
 
 def get_oss_download_url(key:str):
+    logger.debug("Get oss with key:" + key)
     bucket = get_oss_bucket()
     url =  bucket.sign_url('GET', key, 3600*24*7)
     return url
@@ -188,6 +192,7 @@ async def do_prompts_process(request:Request,db:Session = Depends(get_db)):
         wk_info =  WorkFlowRouterInfo()  
         wk_info.prompts_id = re_response["prompt_id"]
         wk_info.client_id = user_dao.user_id
+        wk_info.app_info = get_app_info(body)
         wk_info.status="progress"
         wk_info.comfyui_url=comf_url
         wk_info.gmt_datetime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -223,6 +228,32 @@ def do_queue_process(client_id = Query(None),prompt_id = Query(None),db:Session 
         raise HTTPException(status_code=400,detail="Invaid user")
     queue(comf_url)
 
+@router.get("/mixlab/download/")
+def do_get_file(filename:str,subfolder:str|None=None):
+    
+    if len(subfolder) >0 :
+        oss_key=subfolder+"_"+filename
+    else:
+        oss_key=filename
+    return get_oss_download_url(oss_key)
+
+@router.post("/mixlab/upload")
+async def do_file_upload(file:UploadFile):
+    current_path = os.path.abspath(os.path.dirname(__file__))
+    app_path=os.path.join(current_path, "tempfiles")
+    uploadfile = os.path.join(app_path,file.filename)
+    filebyte = file.file.read()
+    with open(uploadfile,"wb") as tmp_file:
+       tmp_file.write(filebyte)
+
+    oss_key=file.filename
+    result = get_oss_bucket().put_object_from_file(oss_key,uploadfile)
+    os.remove(uploadfile)
+    return result
+    
+
+
+       
 
 def queue(url:str, head:Request.headers):
     try:
@@ -307,7 +338,6 @@ def construct_comf_file_url(url:str,file_names:str):
         logger.debug("subfolder="+str(item["subfolder"]))
         logger.debug("type="+item["type"])
         
-        fileurl = raw_url+"/view?filename="
         fileurl = raw_url+"/view?filename="+quote(item["filename"])+"&type="+item["type"]+"&subfolder="+quote(item["subfolder"])+"&t="+ str(int(round(time.time() * 1000)))
         #fileurl=fileurl.join(quote(item["filename"])).join("&type=").join(item["type"]).join("&subfolder=").join(quote(item["subfolder"])).join("&t=").join(str(int(round(time.time() * 1000))))
 
@@ -343,11 +373,22 @@ def fetch_comf_file(url:str,subfolder:str,filename:str):
             oss_key=filename
         result = get_oss_bucket().put_object_from_file(oss_key,comfyui_file)
         os.remove(comfyui_file)
-
-        url = get_oss_download_url(oss_key)
-        return url
+        return oss_key
     except Exception as e:
         print(e)
+
+#get_app_info
+def get_app_info(body:dict):
+    node_group :dict= body["prompt"]
+
+    for index in node_group.keys():
+        if node_group[index]["class_type"] == "AppInfo" :
+            return json.dumps(node_group[index])
+    
+    return None
+
+
+
 
            
 

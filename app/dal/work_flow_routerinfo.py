@@ -7,6 +7,7 @@ class WorkFlowRouterInfo(Base):
     __tablename__ = "tb_workflow_routerinfo"
     prompts_id = Column(String, primary_key=True)
     client_id = Column(String)
+    app_info = Column(String)
     ori_body = Column(String)
     filenames = Column(String)
     comfyui_url = Column(String)
